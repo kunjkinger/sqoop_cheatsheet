@@ -1,0 +1,136 @@
+SQOOP CHEATSHEET
+
+sqoop list-databases \ 
+--connect server_name \
+--username username \
+--password password
+
+it will list all the databases present in the server
+
+
+
+sqoop list-tables \ 
+--connect server_name\db_name \
+--username username \
+--password password
+
+it will list all the tables in the database
+
+
+eval - you can write pre and post import to db using eval (not for production just for the evaluation purpose for the import)
+
+sqoop eval \
+ --connect server_name\db_name \
+ --username username \
+ --password password \
+ --query "select * from orders LIMIT 10"
+ 
+sqoop eval \
+ --connect server_name\db_name \
+ --username username \
+ --password password \
+ --query "CREATE Table dummy1 (i INT)"
+
+sqoop eval \
+ --connect server_name\db_name \
+ --username username \
+ --password password \
+ --query "INSERT INTO dummy1 VALUES (1)"
+ 
+ sqoop eval \
+ --connect server_name\db_name \
+ --username username \
+ --password password \
+ --query "select * from dummy1 LIMIT 10"
+
+
+import 
+all the arguments. diff between target-dir and warehouse-dir
+run eval before trying the actual import
+
+
+sqoop import \
+ --connect server_name\db_name \
+ --username username \
+ --password password \
+ -- table order \
+ --warehouse-dir hdfs or hive table directory where you want to store the data
+ 
+ (warehouse-dir) will store the table as table name if we want to modify the name use target-dir
+
+sqoop import \
+ --connect server_name\db_name \
+ --username username \
+ --password password \
+ -- table order \
+ --target-dir hdfs or hive table directory where you want to store the data
+
+
+Managing directories
+sqoop import \
+ --connect server_name\db_name \
+ --username username \
+ --password password \
+ -- table order \
+ --warehouse-dir hdfs or hive table directory where you want to store the data \
+ --num-mappers 10 \ partitions describe
+ --delete target-dir
+ 
+ 
+ 
+ sqoop import \
+ --connect server_name\db_name \
+ --username username \
+ --password password \
+ -- table order \
+ --warehouse-dir hdfs or hive table directory where you want to store the data \
+ --num-mappers 10 \ partitions describe
+ --append (means append the data inte existing folder
+ 
+ SPLIT BY (this one works if the table is without Primary Key)
+ for performance, reason choose a column which is indexed as part of the split-by clause.
+ If there are null values in the column, corresponding records from the table will be ignored
+ Data in the split-by column need not to be unique, but if there are duplicates then there can be a skew in the data in the data while importing 
+ 
+ sqoop import \
+ --connect server_name\db_name \
+ --username username \
+ --password password \
+ -- table order \
+ --warehouse-dir hdfs or hive table directory where you want to store the data \
+ --split-by column in a table eg order_item_order_id
+ 
+ splitting data according to us (use boundary-query)
+ sqoop import \
+ --connect server_name\db_name \
+ --username username \
+ --password password \
+ -- table order \
+ --warehouse-dir hdfs or hive table directory where you want to store the data \
+ --boundary-query 'select min(order_item_order_id), max(order_item_order_id) from order where order_item_order_id > 99999'
+ 
+ 
+ specify columns
+ sqoop import \
+ --connect server_name\db_name \
+ --username username \
+ --password password \
+ -- table order \
+ --columns order_item_order_id, order_item_id, order_item_subtotal \
+ --warehouse-dir hdfs or hive table directory where you want to store the data \
+ --num-mappers 2
+ 
+ 
+ with the help of query 
+ FOR QUERY , WE CAN'T USE WAREHOUSE-DIR, MUST HAVE $COND CANT USE COLUMNS, MUST USE SPLIT-BY
+ sqoop import \
+ --connect server_name\db_name \
+ --username username \
+ --password password \
+ --target-dir hdfs or hive table directory where you want to store the data \
+ --num-mappers 2
+ --query "select o.* , sum(oi.order_item_subtotal) order_revenue from orders o join
+ orderm_items oi on o.order_item_id = or.order_item_id and \$CONDITIONS group by
+ o.order_id, o.order_date, o.order_status
+ --split-by order_id \
+ --driver 'com.mysql.jdbc.driver'
